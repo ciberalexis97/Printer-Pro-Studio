@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<script>
+    // El tema (claro/oscuro) se guarda en su propia clave, separada de
+    // 'printstudio_config', para que NUNCA se borre al limpiar un panel,
+    // restablecer valores predeterminados o volver a abrir este archivo.
+    (function () {
+        try {
+            var savedTheme = localStorage.getItem('printstudio_theme');
+            if (savedTheme === 'light' || savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+        } catch (e) {}
+    })();
+</script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Studio Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4"></script>
+</head>
+<body>
+
+    <div class="workspace" id="wsPrint">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                <div class="logo-text">
+                    <h1 id="appTitle">PrintStudio <span class="logo-badge">PRO</span></h1>
+                    <div class="logo-sub" id="appSubtitle">Impresión inteligente</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="btnResetPrintPanel" title="Limpiar panel y restablecer valores predeterminados">🧹</button>
+                <button class="icon-btn theme-toggle" id="themeToggle" title="Alternar modo claro/oscuro">🌓</button>
+            </div>
+        </div>
+
+        <div class="sidebar-body">
+
+            <section>
+                <div class="slabel">Imágenes</div>
+                <div class="dropzone" id="dropzone">
+                    <span class="img-badge" id="imgBadge">0</span>
+                    <span class="dz-icon">📂</span>
+                    <div class="dz-title">Haz clic o arrastra archivos</div>
+                    <div class="dz-sub">JPG · PNG · WebP · GIF · ICO · BMP<br><strong>Archivos .ZIP</strong> de WhatsApp</div>
+                    <input type="file" id="fileInput" multiple accept="image/*,.zip,application/zip" style="display:none">
+                </div>
+                <div class="local-badge" title="Tus archivos se procesan en tu navegador">Nota:Tus archivos IMG no salen de este dispositivo</div>
+                <div class="paste-actions">
+                    <button class="btn btn-ghost btn-sm" id="btnPasteImage" title="Pega una imagen copiada desde Google, otra página o el portapapeles">Pegar imagen</button>
+                    <button class="btn btn-ghost btn-sm" id="btnImageURL" title="Cargar una imagen usando su enlace directo">Desde URL</button>
+                </div>
+                <div class="tip" style="margin-top:5px;">También puedes usar <strong>Ctrl + V</strong> después de copiar una imagen.</div>
+            </section>
+
+            <div class="thumbs-section" id="thumbsSection">
+                <div class="thumbs-header">
+                    <span class="slabel" style="margin:0">Vista previa · arrastra para reordenar</span>
+                    <button class="btn btn-ghost" id="btnClear">✕ Limpiar</button>
+                </div>
+                <div class="thumbs-strip" id="thumbsStrip"></div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;">
+                    <button class="btn btn-ghost btn-sm" id="btnDuplSelected" title="Duplicar imagen N veces">📋 Duplicar N×</button>
+                    <button class="btn btn-ghost btn-sm" id="btnRotAllCW" title="Rotar todas +90°">↻ Rotar todas</button>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <section>
+                <div class="slabel">Configuración de hoja</div>
+                <div class="form-stack">
+                    <div class="field">
+                        <label class="field-label" for="paperSize">Tamaño</label>
+                        <div class="select-wrap">
+                            <select id="paperSize">
+                                <option value="carta">Carta — 21.6 × 27.9 cm</option>
+                                <option value="oficio">Oficio — 21.6 × 35.6 cm</option>
+                                <option value="doble">Doble Carta — 27.9 × 43.2 cm</option>
+                                <option value="a4">A4 — 21.0 × 29.7 cm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Orientación</span>
+                        <div class="orient-row">
+                            <button class="orient-btn active" id="btnPortrait">▯ Vertical</button>
+                            <button class="orient-btn" id="btnLandscape">▭ Horizontal</button>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Margen de impresora</span>
+                        <div class="dim-wrap">
+                            <input type="number" id="marginMM" placeholder="Margen" step="0.5" min="0" max="30" value="8">
+                            <span class="dim-unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Espacio entre imágenes</span>
+                        <div class="dim-wrap">
+                            <input type="number" id="gapMM" placeholder="Espacio" step="0.5" min="0" max="20" value="2">
+                            <span class="dim-unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Color guía de corte</span>
+                        <div style="display:flex;gap:7px;align-items:center;">
+                            <input type="color" id="guideColor" value="#000000">
+                            <span style="font-size:0.68rem;color:var(--t500);">Negro, gris o rojo</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="divider"></div>
+
+            <section>
+                <div class="slabel">Presets rápidos</div>
+                <div class="preset-row" id="presetRow">
+                    <button class="preset-chip" data-preset="credencial" data-w="8.5" data-h="5.5">Credencial 8.5×5.5</button>
+                    <button class="preset-chip" data-preset="infantil" data-w="2.5" data-h="3">Infantil</button>
+                    <button class="preset-chip" data-preset="pasaporte" data-w="3.5" data-h="4.5">Pasaporte</button>
+                    <button class="preset-chip" data-preset="carne" data-w="2.6" data-h="3.6">Carné</button>
+                    <button class="preset-chip" data-preset="10x15" data-w="10" data-h="15">10×15</button>
+                    <button class="preset-chip" data-preset="13x18" data-w="13" data-h="18">13×18</button>
+                </div>
+                <div id="credencialOpts" style="display:none;margin-top:7px;gap:5px;flex-direction:column;">
+                    <span class="field-label">Disposición</span>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        <button class="btn btn-ghost btn-sm cred-disp active" data-disp="h-side">Lado a lado</button>
+                        <button class="btn btn-ghost btn-sm cred-disp" data-disp="v-stack">Arriba/Abajo</button>
+                    </div>
+                    <span class="field-label">Ampliación</span>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        <button class="btn btn-ghost btn-sm cred-scale active" data-scale="1">100%</button>
+                        <button class="btn btn-ghost btn-sm cred-scale" data-scale="1.5">150%</button>
+                        <button class="btn btn-ghost btn-sm cred-scale" data-scale="2">200%</button>
+                    </div>
+                </div>
+                <div id="infantilOpts" style="display:none;margin-top:7px;gap:5px;flex-direction:column;">
+                    <span class="field-label">¿Cuántas fotos?</span>
+                    <div class="dim-wrap">
+                        <input type="number" id="infantilCount" placeholder="Ej: 20" step="1" min="1" max="200" value="20">
+                    </div>
+                </div>
+            </section>
+
+            <div class="divider"></div>
+
+            <section>
+                <div class="slabel">Composición tipo PhotoScape X</div>
+                <div class="layout-tabs" id="layoutTabs">
+                    <button class="layout-tab active" data-layout-mode="cell">Tamaño de celda</button>
+                    <button class="layout-tab" data-layout-mode="mosaic">Mosaico</button>
+                    <button class="layout-tab" data-layout-mode="one">1×1</button>
+                </div>
+                <div class="advanced-panel">
+                    <div id="mosaicPanel" style="display:none;flex-direction:column;gap:7px;">
+                        <div class="dim-row">
+                            <div class="field">
+                                <label class="field-label" for="mosaicRows">Filas</label>
+                                <input type="number" id="mosaicRows" value="2" min="1" max="20" step="1">
+                            </div>
+                            <div class="field">
+                                <label class="field-label" for="mosaicCols">Columnas</label>
+                                <input type="number" id="mosaicCols" value="2" min="1" max="20" step="1">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <span class="field-label">Tamaño calculado de celda</span>
+                            <div class="readonly-value" id="mosaicCellSize">—</div>
+                        </div>
+                    </div>
+                    <div id="onePanel" class="tip" style="display:none;text-align:left;">Cada imagen ocupará una hoja completa dentro de los márgenes configurados.</div>
+
+                    <div class="field">
+                        <span class="field-label">Ajuste de la imagen dentro de la celda</span>
+                        <div class="fit-options">
+                            <div class="fit-option">
+                                <input type="radio" name="fitMode" id="fitContain" value="contain" checked>
+                                <label for="fitContain"><span>◉</span><span>Encajar</span></label>
+                            </div>
+                            <div class="fit-option">
+                                <input type="radio" name="fitMode" id="fitCover" value="cover">
+                                <label for="fitCover"><span>●</span><span>Rellenar</span></label>
+                            </div>
+                            <div class="fit-option">
+                                <input type="radio" name="fitMode" id="fitStretch" value="fill">
+                                <label for="fitStretch"><span>↔</span><span>Estirar</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="check-grid">
+                        <label class="check-card"><input type="checkbox" id="chkAutoRotate"> Rotación automática</label>
+                        <label class="check-card"><input type="checkbox" id="chkCellBorder" checked> Borde de celda</label>
+                        <label class="check-card"><input type="checkbox" id="chkFilename"> Nombre de archivo</label>
+                        <label class="check-card"><input type="checkbox" id="chkUseMargins" checked> Usar márgenes</label>
+                    </div>
+                    <div class="dim-row">
+                        <div class="field">
+                            <label class="field-label" for="exportDPI">Calidad PDF</label>
+                            <div class="select-wrap">
+                                <select id="exportDPI">
+                                    <option value="72">72 DPI · borrador</option>
+                                    <option value="150">150 DPI · normal</option>
+                                    <option value="300" selected>300 DPI · alta</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="filenamePt">Nombre (pt)</label>
+                            <input type="number" id="filenamePt" value="8" min="5" max="24" step="1" disabled>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="divider"></div>
+
+            <section>
+                <div class="slabel">Tamaño por imagen</div>
+                <div class="form-stack">
+                    <div class="dim-row">
+                        <div class="dim-wrap">
+                            <input type="number" id="imgWidth" placeholder="Ancho" step="0.1" min="0.5" value="10">
+                            <span class="dim-unit">cm</span>
+                        </div>
+                        <div class="dim-wrap">
+                            <input type="number" id="imgHeight" placeholder="Alto" step="0.1" min="0.5" value="15">
+                            <span class="dim-unit">cm</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" id="btnAutoFill" style="flex:1;">Llenar hoja automáticamente</button>
+                    <div class="field">
+                        <span class="field-label">Copias de cada imagen</span>
+                        <div class="dim-wrap">
+                            <input type="number" id="copyCount" placeholder="Copias" step="1" min="1" max="50" value="1">
+                            <span class="dim-unit" style="right:26px;">×</span>
+                        </div>
+                        <div id="totalPrints" style="font-size:0.7rem;color:var(--t500);margin-top:2px;">Total: 0 impresiones</div>
+                    </div>
+                    <div class="field" style="flex-direction:row;align-items:center;gap:7px;">
+                        <input type="checkbox" id="chkNumbering" style="width:auto;accent-color:var(--primary);">
+                        <label class="field-label" for="chkNumbering" style="margin:0;cursor:pointer;">Numerar imágenes</label>
+                    </div>
+                    <div class="viability idle" id="viability">📐 Ingresa las medidas para calcular</div>
+                </div>
+            </section>
+
+            <div class="divider"></div>
+
+            <section style="display:flex;flex-direction:column;gap:6px;">
+                <button class="btn btn-primary" id="btnGenerate">Distribuir imágenes</button>
+                <button class="btn btn-success" id="btnPrint" disabled>Imprimir / Guardar PDF</button>
+                <button class="btn btn-accent" id="btnExportPDF" disabled>Exportar PDF real</button>
+                <p class="tip">Al imprimir elige <strong>Guardar como PDF</strong><br>o usa <strong>Exportar PDF real</strong><br><strong>Para conservar los milímetros: Tamaño real / escala 100%.</strong></p>
+            </section>
+
+            <div id="statsSection" style="display:none;">
+                <div class="slabel">Resumen del proyecto</div>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <div class="stat-val" id="statTotal">0</div>
+                        <div class="stat-lbl">Imágenes</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-val" id="statPer">0</div>
+                        <div class="stat-lbl">Por hoja</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-val" id="statSheets">0</div>
+                        <div class="stat-lbl">Hojas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="preview-area" id="previewArea">
+        <img src="assets/logo.png" alt="" id="printWatermark" class="print-watermark">
+        <div class="zoom-bar" id="zoomBar">
+            <button class="zoom-btn" id="zoomOut" title="Alejar">−</button>
+            <input type="range" id="zoomSlider" min="30" max="220" value="78" step="5">
+            <span class="zoom-val" id="zoomVal">78%</span>
+            <button class="zoom-btn" id="zoomIn" title="Acercar">+</button>
+            <button class="zoom-btn" id="zoomReset" title="Restablecer" style="font-size:10px;">↺</button>
+        </div>
+        <div class="preview-inner" id="previewInner">
+            <div class="empty-state" id="emptyState">
+                <div class="es-title">Sin imágenes aún</div>
+                <div class="es-sub">Arrastra fotos o un ZIP, configura el tamaño y presiona <strong>Distribuir imágenes</strong>.</div>
+            </div>
+        </div>
+    </main>
+    </div><!-- /wsPrint -->
+
+    <!-- ===================== WORKSPACE: CONVERTIDOR DE IMÁGENES ===================== -->
+    <div class="workspace hidden" id="wsConvert">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                    <div class="logo-text">
+                        <h1>Convertidor <span class="logo-badge">PRO</span></h1>
+                        <div class="logo-sub">JPG · PNG · WebP · SVG · ICO · GIF · TIFF</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="btnResetConvertPanel" title="Limpiar panel y restablecer valores predeterminados">🧹</button>
+                </div>
+            </div>
+            <div class="sidebar-body">
+                <section>
+                    <div class="slabel">Imagen</div>
+                    <div class="dropzone" id="cvDropzone">
+                        <span class="dz-icon">📂</span>
+                        <div class="dz-title">Haz clic o arrastra 1 a 100 imágenes</div>
+                        <div class="dz-sub">JPG · PNG · WebP · GIF · BMP · SVG · TIFF · ICO<br>Máx. 30 MB por imagen</div>
+                        <input type="file" id="cvFileInput" accept="image/*" multiple style="display:none">
+                    </div>
+                    <div class="local-badge" title="Tus archivos se procesan en tu navegador">🔒 Tus archivos no salen de este dispositivo</div>
+                    <div class="tool-info-box" id="cvOriginalInfo" style="margin-top:8px;display:none;"></div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">Formato de salida</div>
+                    <div class="chip-row" id="cvFormatChips">
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtPng" value="png" checked><label for="cvFmtPng">PNG</label></div>
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtJpg" value="jpeg"><label for="cvFmtJpg">JPG</label></div>
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtWebp" value="webp"><label for="cvFmtWebp">WebP</label></div>
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtSvg" value="svg"><label for="cvFmtSvg">SVG</label></div>
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtIco" value="ico"><label for="cvFmtIco">ICO</label></div>
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtGif" value="gif"><label for="cvFmtGif">GIF</label></div>
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtTiff" value="tiff"><label for="cvFmtTiff">TIFF</label></div>
+                        <div class="chip-opt"><input type="radio" name="cvFormat" id="cvFmtRaw" value="raw"><label for="cvFmtRaw">RAW</label></div>
+                    </div>
+                    <div class="tip" id="cvFormatTip" style="margin-top:6px;">Sin pérdida, admite transparencia.</div>
+                </section>
+
+                <section id="cvQualitySection">
+                    <div class="slabel">Calidad · <span id="cvQualityVal">90%</span></div>
+                    <input type="range" id="cvQuality" min="10" max="100" value="90" step="1" style="width:100%;accent-color:var(--primary);">
+                    <div class="tip">Más calidad = archivo más pesado. Aplica a JPG y WebP.</div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">Tamaño (px)</div>
+                    <div class="dim-row-lock" id="cvDimRow">
+                        <div class="field">
+                            <label class="field-label" for="cvWidth" id="cvWidthLabel">Ancho</label>
+                            <input type="number" id="cvWidth" min="1" max="8000" placeholder="Ancho">
+                        </div>
+                        <button class="lock-toggle on" id="cvLockAspect" title="Mantener proporción">🔒</button>
+                        <div class="field" id="cvHeightField">
+                            <label class="field-label" for="cvHeight">Alto</label>
+                            <input type="number" id="cvHeight" min="1" max="8000" placeholder="Alto">
+                        </div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" id="cvBtnOriginalSize" style="margin-top:6px;">↺ Tamaño original</button>
+                    <div class="tip" id="cvSizeTip" style="margin-top:5px;">Máximo 8000 px por lado. Con el candado activado, al cambiar un lado se ajusta el otro.</div>
+                </section>
+
+                <div class="divider"></div>
+
+                <button class="btn btn-primary" id="btnCvConvert" disabled>⬇️ Convertir y descargar</button>
+                <div class="tool-info-box" id="cvOutputInfo" style="display:none;"></div>
+            </div>
+        </aside>
+        <main class="preview-area">
+            <img src="assets/logo.png" alt="" class="print-watermark" aria-hidden="true">
+            <div class="preview-inner" id="cvPreviewInner" style="align-items:center;justify-content:center;">
+                <div class="tool-empty" id="cvEmptyState">
+                    <div class="es-icon">🖼️</div>
+                    <div class="es-title">Sin imágenes aún</div>
+                    <div class="es-sub">Sube de 1 a 100 imágenes para convertirlas entre formatos y cambiar su tamaño, todo en tu navegador. Con 2 o más, se descargan juntas en un .zip.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== WORKSPACE: CURP AL 200% ===================== -->
+    <div class="workspace hidden" id="wsCurp">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                    <div class="logo-text">
+                        <h1>CURP <span class="logo-badge">200%</span></h1>
+                        <div class="logo-sub">Recorte y ampliación</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="btnResetCurpPanel" title="Limpiar panel y restablecer valores predeterminados">🧹</button>
+                </div>
+            </div>
+            <div class="sidebar-body">
+                <section>
+                    <div class="slabel">1 · Sube la constancia</div>
+                    <div class="dropzone" id="curpDropzone">
+                        <span class="dz-icon">📂</span>
+                        <div class="dz-title">Haz clic o arrastra el CURP</div>
+                        <div class="dz-sub">PDF oficial de gob.mx, o una foto<br>JPG · PNG · WebP · PDF · Máx. 15 MB</div>
+                        <input type="file" id="curpFileInput" accept="image/*,.pdf,application/pdf" style="display:none">
+                    </div>
+                    <div class="local-badge" title="Tus archivos se procesan en tu navegador">🔒 Tus archivos no salen de este dispositivo</div>
+                    <div class="tool-info-box" id="curpStatus" style="margin-top:8px;">Esperando archivo. Nada se envía al servidor: todo se procesa en tu navegador.</div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">2 · Recuadro detectado</div>
+                    <div class="tip">Solo se acepta como "detectado" un recuadro con borde verde institucional y proporción de credencial. Ajusta el marco amarillo arrastrando el área o sus esquinas si el recorte no quedó exacto.</div>
+                    <button class="btn btn-ghost btn-sm" id="btnCurpAutoDetect" style="margin-top:6px;" disabled>🔍 Detectar de nuevo</button>
+                    <div class="check-card" style="margin-top:8px;">
+                        <input type="checkbox" id="curpOcrCheck" checked>
+                        <label for="curpOcrCheck" style="cursor:pointer;">Verificar que el recorte tenga la estructura de un CURP (OCR, requiere internet)</label>
+                    </div>
+                    <div class="tool-info-box" id="curpCurpStatus" style="margin-top:8px; display:none;"></div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">3 · Tamaño de impresión</div>
+                    <div class="chip-row">
+                        <div class="chip-opt"><input type="radio" name="curpScale" id="curpS80" value="0.8"><label for="curpS80">80%</label></div>
+                        <div class="chip-opt"><input type="radio" name="curpScale" id="curpS100" value="1" checked><label for="curpS100">100%</label></div>
+                        <div class="chip-opt"><input type="radio" name="curpScale" id="curpS200" value="2"><label for="curpS200">200%</label></div>
+                    </div>
+                    <div class="tool-info-box" id="curpRealSizeInfo" style="margin-top:8px;">Sube un archivo para calcular el tamaño real del recuadro.</div>
+                    <div class="field" id="curpDpiField" style="margin-top:8px; display:none;">
+                        <label class="field-label" for="curpImgDpi">Resolución de la foto (DPI)</label>
+                        <input type="number" id="curpImgDpi" min="72" max="1200" step="1" value="300" class="text-input">
+                        <div class="tip">Solo aplica a fotos/JPG/PNG: no traen un tamaño real incrustado, así que el % se calcula a partir de este valor. Con el PDF oficial de gob.mx el tamaño real se calcula exacto, sin necesidad de este dato.</div>
+                    </div>
+                    <div class="check-card" style="margin-top:8px;">
+                        <input type="checkbox" id="curpExpand">
+                        <label for="curpExpand" style="cursor:pointer;">Expandir a todo el alto de la hoja</label>
+                    </div>
+                    <div class="tip">Independiente del %. Estira el recuadro a todo el alto y ancho de la hoja.</div>
+                    <div class="field" style="margin-top:8px;">
+                        <label class="field-label" for="curpPaper">Hoja</label>
+                        <div class="select-wrap">
+                            <select id="curpPaper">
+                                <option value="carta">Carta horizontal — 27.9 × 21.6 cm</option>
+                                <option value="oficio">Oficio horizontal — 35.6 × 21.6 cm</option>
+                                <option value="a4">A4 horizontal — 29.7 × 21.0 cm</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="divider"></div>
+
+                <button class="btn btn-success" id="btnCurpPDF" disabled>📄 Descargar CURP 200% (PDF)</button>
+                <button class="btn btn-ghost" id="btnCurpPNG" disabled style="margin-top:6px;">🖼 Descargar PNG</button>
+            </div>
+        </aside>
+        <main class="preview-area">
+            <img src="assets/logo.png" alt="" class="print-watermark" aria-hidden="true">
+            <div class="preview-inner" id="curpPreviewInner" style="align-items:center;justify-content:center;">
+                <div class="tool-empty" id="curpEmptyState">
+                    <div class="es-icon">🪪</div>
+                    <div class="es-title">Sin CURP aún</div>
+                    <div class="es-sub">Sube la constancia PDF de gob.mx o una foto donde se vea el recuadro verde.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== WORKSPACE: POSTER GIGANTE ===================== -->
+    <div class="workspace hidden" id="wsPoster">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                    <div class="logo-text">
+                        <h1>Poster <span class="logo-badge">XL</span></h1>
+                        <div class="logo-sub">Divide en hojas carta</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="btnResetPosterPanel" title="Limpiar panel y restablecer valores predeterminados">🧹</button>
+                </div>
+            </div>
+            <div class="sidebar-body">
+                <section>
+                    <div class="slabel">Imagen</div>
+                    <div class="dropzone" id="posterDropzone">
+                        <span class="dz-icon">📂</span>
+                        <div class="dz-title">Haz clic o arrastra una imagen</div>
+                        <div class="dz-sub">JPG · PNG · WebP<br>Se dividirá en hojas tamaño carta</div>
+                        <input type="file" id="posterFileInput" accept="image/*" style="display:none">
+                    </div>
+                    <div class="local-badge" title="Tus archivos se procesan en tu navegador">🔒 Tus archivos no salen de este dispositivo</div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">Medidas finales del póster (cm)</div>
+                    <div class="dim-row-lock">
+                        <div class="field">
+                            <label class="field-label" for="posterW">Ancho</label>
+                            <input type="number" id="posterW" min="1" max="1000" step="0.1" value="60">
+                        </div>
+                        <button class="lock-toggle on" id="posterLockAspect" title="Mantener proporción">🔒</button>
+                        <div class="field">
+                            <label class="field-label" for="posterH">Alto</label>
+                            <input type="number" id="posterH" min="1" max="1000" step="0.1" value="90">
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="slabel">Orientación de las hojas</div>
+                    <div class="layout-tabs" style="grid-template-columns:1fr 1fr;">
+                        <button class="layout-tab active" id="posterOrientV" data-o="v">▯ Carta vertical</button>
+                        <button class="layout-tab" id="posterOrientH" data-o="h">▭ Carta horizontal</button>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="field">
+                        <label class="field-label" for="posterOverlap">Traslape para pegar (cm)</label>
+                        <input type="number" id="posterOverlap" min="0" max="3" step="0.1" value="0">
+                    </div>
+                    <div class="field" style="margin-top:8px;">
+                        <label class="field-label" for="posterMargin">Margen de impresora (cm)</label>
+                        <input type="number" id="posterMargin" min="0" max="2" step="0.1" value="0.4">
+                    </div>
+                </section>
+
+                <div class="divider"></div>
+
+                <div class="tool-info-box accent" id="posterInfo">Sube una imagen para calcular las hojas necesarias.</div>
+
+                <div class="divider"></div>
+
+                <button class="btn btn-primary" id="btnPosterPreview" disabled>👁 Generar vista previa</button>
+                <button class="btn btn-success" id="btnPosterPDF" disabled style="margin-top:6px;">📄 Exportar PDF</button>
+                <button class="btn btn-ghost" id="btnPosterPrint" disabled style="margin-top:6px;">🖨 Imprimir directo</button>
+            </div>
+        </aside>
+        <main class="preview-area">
+            <img src="assets/logo.png" alt="" class="print-watermark" aria-hidden="true">
+            <div class="preview-inner" id="posterPreviewInner" style="align-items:center;justify-content:center;flex-direction:column;">
+                <div class="tool-empty" id="posterEmptyState">
+                    <div class="es-icon">🖼️</div>
+                    <div class="es-title">Sin póster aún</div>
+                    <div class="es-sub">Sube una imagen, define el ancho y alto finales en cm, y genera la vista previa dividida en hojas carta.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Contenedor usado solo al imprimir el póster -->
+    <div id="posterPrintPages"></div>
+
+    <!-- ===================== WORKSPACE: COMPRESOR DE IMÁGENES ===================== -->
+    <div class="workspace hidden" id="wsCompress">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                    <div class="logo-text">
+                        <h1>Compresor <span class="logo-badge">PRO</span></h1>
+                        <div class="logo-sub">Baja el peso sin perder calidad</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="btnResetCompressPanel" title="Limpiar panel y restablecer valores predeterminados">🧹</button>
+                </div>
+            </div>
+            <div class="sidebar-body">
+                <section>
+                    <div class="slabel">Imágenes</div>
+                    <div class="dropzone" id="cpDropzone">
+                        <span class="dz-icon">📂</span>
+                        <div class="dz-title">Haz clic o arrastra 1 a 100 imágenes</div>
+                        <div class="dz-sub">JPG · PNG · WebP<br>Máx. 30 MB por imagen</div>
+                        <input type="file" id="cpFileInput" accept="image/*" multiple style="display:none">
+                    </div>
+                    <div class="local-badge" title="Tus archivos se procesan en tu navegador">🔒 Tus archivos no salen de este dispositivo</div>
+                    <div class="tool-info-box" id="cpOriginalInfo" style="margin-top:8px;display:none;"></div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">Para qué la necesitas</div>
+                    <div class="chip-row" id="cpPresetChips">
+                        <div class="chip-opt"><input type="radio" name="cpPreset" id="cpPresWA" value="wa" checked><label for="cpPresWA">WhatsApp</label></div>
+                        <div class="chip-opt"><input type="radio" name="cpPreset" id="cpPresMail" value="mail"><label for="cpPresMail">Correo</label></div>
+                        <div class="chip-opt"><input type="radio" name="cpPreset" id="cpPresUsb" value="usb"><label for="cpPresUsb">USB / Imprimir</label></div>
+                        <div class="chip-opt"><input type="radio" name="cpPreset" id="cpPresCustom" value="custom"><label for="cpPresCustom">Manual</label></div>
+                    </div>
+                    <div class="tip" id="cpPresetTip" style="margin-top:6px;">Calidad media y hasta 1280 px de lado largo: ligero para enviar por WhatsApp.</div>
+                </section>
+
+                <div class="divider" id="cpManualDivider" style="display:none;"></div>
+
+                <section id="cpManualSection" style="display:none;">
+                    <div class="slabel">Calidad · <span id="cpQualityVal">70%</span></div>
+                    <input type="range" id="cpQuality" min="10" max="100" value="70" step="1" style="width:100%;accent-color:var(--primary);">
+                    <div class="field" style="margin-top:10px;">
+                        <label class="field-label" for="cpMaxDim">Lado más largo, máximo (px)</label>
+                        <input type="number" id="cpMaxDim" min="200" max="8000" placeholder="Sin límite">
+                    </div>
+                </section>
+
+                <div class="divider"></div>
+
+                <button class="btn btn-primary" id="btnCpCompress" disabled>Comprimir y descargar</button>
+                <div class="tool-info-box" id="cpOutputInfo" style="display:none;"></div>
+            </div>
+        </aside>
+        <main class="preview-area">
+            <img src="assets/logo.png" alt="" class="print-watermark" aria-hidden="true">
+            <div class="preview-inner" id="cpPreviewInner" style="align-items:center;justify-content:center;">
+                <div class="tool-empty" id="cpEmptyState">
+                    <div class="es-title">Sin imágenes aún</div>
+                    <div class="es-sub">Sube de 1 a 100 fotos para reducir su peso en KB/MB, ideal para WhatsApp, correo o USB. La salida siempre es JPG. Todo se procesa en tu navegador.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== WORKSPACE: IMÁGENES A PDF ===================== -->
+    <div class="workspace hidden" id="wsImg2Pdf">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                    <div class="logo-text">
+                        <h1>Imágenes a PDF <span class="logo-badge">PRO</span></h1>
+                        <div class="logo-sub">Une varias fotos en un solo PDF</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="btnResetImg2PdfPanel" title="Limpiar panel y restablecer valores predeterminados">🧹</button>
+                </div>
+            </div>
+            <div class="sidebar-body">
+                <section>
+                    <div class="slabel">Imágenes (en orden)</div>
+                    <div class="dropzone" id="i2pDropzone">
+                        <span class="dz-icon">📂</span>
+                        <div class="dz-title">Haz clic o arrastra 1 a 100 imágenes</div>
+                        <div class="dz-sub">JPG · PNG · WebP<br>Usa las flechas para reordenarlas</div>
+                        <input type="file" id="i2pFileInput" accept="image/*" multiple style="display:none">
+                    </div>
+                    <div class="local-badge" title="Tus archivos se procesan en tu navegador">🔒 Tus archivos no salen de este dispositivo</div>
+                    <div class="tool-info-box" id="i2pOriginalInfo" style="margin-top:8px;display:none;"></div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">Hoja</div>
+                    <div class="field">
+                        <label class="field-label" for="i2pPaper">Tamaño</label>
+                        <select id="i2pPaper">
+                            <option value="carta" selected>Carta — 21.6 × 27.9 cm</option>
+                            <option value="oficio">Oficio — 21.6 × 35.6 cm</option>
+                            <option value="a4">A4 — 21.0 × 29.7 cm</option>
+                            <option value="doble">Doble Carta — 27.9 × 43.2 cm</option>
+                        </select>
+                    </div>
+                    <div class="chip-row" id="i2pFitChips" style="margin-top:8px;">
+                        <div class="chip-opt"><input type="radio" name="i2pFit" id="i2pFitContain" value="contain" checked><label for="i2pFitContain">Página completa</label></div>
+                        <div class="chip-opt"><input type="radio" name="i2pFit" id="i2pFitCover" value="cover"><label for="i2pFitCover">Llenar la hoja</label></div>
+                    </div>
+                    <div class="tip" id="i2pFitTip" style="margin-top:6px;">La imagen se ve completa, con un margen blanco alrededor si su proporción no coincide con la hoja.</div>
+                </section>
+
+                <div class="divider"></div>
+
+                <button class="btn btn-primary" id="btnI2pBuild" disabled>Crear PDF y descargar</button>
+                <div class="tool-info-box" id="i2pOutputInfo" style="display:none;"></div>
+            </div>
+        </aside>
+        <main class="preview-area">
+            <img src="assets/logo.png" alt="" class="print-watermark" aria-hidden="true">
+            <div class="preview-inner" id="i2pPreviewInner" style="align-items:center;justify-content:center;">
+                <div class="tool-empty" id="i2pEmptyState">
+                    <div class="es-title">Sin imágenes aún</div>
+                    <div class="es-sub">Sube de 1 a 100 fotos — por ejemplo, las de un trámite — y arma un solo PDF con una imagen por página, en el orden que quieras.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== WORKSPACE: HERRAMIENTAS DE PDF ===================== -->
+    <div class="workspace hidden" id="wsPdfTools">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                    <div class="logo-text">
+                        <h1>PDF <span class="logo-badge">PRO</span></h1>
+                        <div class="logo-sub">Comprimir · Unir · Dividir</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="btnResetPdfToolsPanel" title="Limpiar panel y restablecer valores predeterminados">🧹</button>
+                </div>
+            </div>
+            <div class="sidebar-body">
+                <section>
+                    <div class="slabel">Qué quieres hacer</div>
+                    <div class="chip-row" id="pdfModeChips">
+                        <div class="chip-opt"><input type="radio" name="pdfMode" id="pdfModeCompress" value="compress" checked><label for="pdfModeCompress">Comprimir</label></div>
+                        <div class="chip-opt"><input type="radio" name="pdfMode" id="pdfModeMerge" value="merge"><label for="pdfModeMerge">Unir</label></div>
+                        <div class="chip-opt"><input type="radio" name="pdfMode" id="pdfModeSplit" value="split"><label for="pdfModeSplit">Dividir</label></div>
+                    </div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section id="pdfDropSection">
+                    <div class="slabel" id="pdfDropLabel">PDF</div>
+                    <div class="dropzone" id="pdfDropzone">
+                        <span class="dz-icon">📄</span>
+                        <div class="dz-title" id="pdfDzTitle">Haz clic o arrastra un PDF</div>
+                        <div class="dz-sub" id="pdfDzSub">Máx. 60 MB</div>
+                        <input type="file" id="pdfFileInput" accept="application/pdf" style="display:none">
+                    </div>
+                    <div class="local-badge" title="Tus archivos se procesan en tu navegador">🔒 Tus archivos no salen de este dispositivo</div>
+                    <div class="tool-info-box" id="pdfOriginalInfo" style="margin-top:8px;display:none;"></div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section id="pdfCompressOpts">
+                    <div class="slabel">Nivel de compresión</div>
+                    <div class="chip-row">
+                        <div class="chip-opt"><input type="radio" name="pdfCompressLevel" id="pdfCLevelLow" value="low"><label for="pdfCLevelLow">Máxima</label></div>
+                        <div class="chip-opt"><input type="radio" name="pdfCompressLevel" id="pdfCLevelMed" value="med" checked><label for="pdfCLevelMed">Equilibrada</label></div>
+                        <div class="chip-opt"><input type="radio" name="pdfCompressLevel" id="pdfCLevelHigh" value="high"><label for="pdfCLevelHigh">Alta calidad</label></div>
+                    </div>
+                    <div class="tip" style="margin-top:6px;">Vuelve a dibujar cada página como imagen a menor resolución. El PDF resultante ya no tendrá texto seleccionable, solo imágenes.</div>
+                    <button class="btn btn-primary" id="btnPdfCompress" style="margin-top:10px;" disabled>Comprimir y descargar</button>
+                </section>
+
+                <section id="pdfMergeOpts" style="display:none;">
+                    <div class="tip">Se unen en el orden de la lista, conservando texto y calidad originales. Usa las flechas para reordenar antes de unir.</div>
+                    <button class="btn btn-primary" id="btnPdfMerge" style="margin-top:10px;" disabled>Unir y descargar</button>
+                </section>
+
+                <section id="pdfSplitOpts" style="display:none;">
+                    <div class="slabel">Modo de división</div>
+                    <div class="chip-row">
+                        <div class="chip-opt"><input type="radio" name="pdfSplitMode" id="pdfSplitAll" value="all" checked><label for="pdfSplitAll">Cada página aparte</label></div>
+                        <div class="chip-opt"><input type="radio" name="pdfSplitMode" id="pdfSplitRange" value="range"><label for="pdfSplitRange">Un rango</label></div>
+                    </div>
+                    <div class="field" id="pdfRangeField" style="display:none;margin-top:8px;">
+                        <label class="field-label" for="pdfRangeInput">Páginas (ej. 1-3 o 2,4,6)</label>
+                        <input type="text" id="pdfRangeInput" placeholder="1-3">
+                    </div>
+                    <div class="tip" id="pdfSplitTip" style="margin-top:6px;">Cada página se descarga como un PDF individual, todas juntas en un .zip.</div>
+                    <button class="btn btn-primary" id="btnPdfSplit" style="margin-top:10px;" disabled>Dividir y descargar</button>
+                </section>
+
+                <div class="tool-info-box" id="pdfOutputInfo" style="display:none;margin-top:10px;"></div>
+            </div>
+        </aside>
+        <main class="preview-area">
+            <img src="assets/logo.png" alt="" class="print-watermark" aria-hidden="true">
+            <div class="preview-inner" id="pdfPreviewInner" style="align-items:center;justify-content:center;">
+                <div class="tool-empty" id="pdfEmptyState">
+                    <div class="es-title">Sin PDF aún</div>
+                    <div class="es-sub">Comprime un PDF para que pese menos, une varios en uno solo, o divide uno en partes. Todo se procesa en tu navegador.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== WORKSPACE: GENERADOR DE QR ===================== -->
+    <div class="workspace hidden" id="wsQr">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Ciber Alexis" class="logo-icon brand-logo">
+                    <div class="logo-text">
+                        <h1>Código QR <span class="logo-badge">PRO</span></h1>
+                        <div class="logo-sub">WhatsApp · redes · menú de precios</div>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-body">
+                <section>
+                    <div class="slabel">Tipo de contenido</div>
+                    <div class="chip-row" id="qrModeChips">
+                        <div class="chip-opt"><input type="radio" name="qrMode" id="qrModeText" value="text" checked><label for="qrModeText">Texto / enlace</label></div>
+                        <div class="chip-opt"><input type="radio" name="qrMode" id="qrModeWa" value="whatsapp"><label for="qrModeWa">WhatsApp</label></div>
+                    </div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section id="qrTextSection">
+                    <div class="field">
+                        <label class="field-label" for="qrTextInput">Texto, enlace de red social o del menú</label>
+                        <textarea id="qrTextInput" rows="3" placeholder="https://instagram.com/tu_negocio"></textarea>
+                    </div>
+                </section>
+
+                <section id="qrWaSection" style="display:none;">
+                    <div class="field">
+                        <label class="field-label" for="qrWaNumber">Número con código de país (solo dígitos)</label>
+                        <input type="text" id="qrWaNumber" placeholder="527221234567">
+                    </div>
+                    <div class="field" style="margin-top:8px;">
+                        <label class="field-label" for="qrWaMsg">Mensaje inicial (opcional)</label>
+                        <textarea id="qrWaMsg" rows="2" placeholder="Hola, quiero información de..."></textarea>
+                    </div>
+                </section>
+
+                <div class="divider"></div>
+
+                <section>
+                    <div class="slabel">Tamaño · <span id="qrSizeVal">640 px</span></div>
+                    <input type="range" id="qrSize" min="200" max="1200" value="640" step="20" style="width:100%;accent-color:var(--primary);">
+                </section>
+
+                <div class="divider"></div>
+
+                <button class="btn btn-primary" id="btnQrGenerate">Generar código QR</button>
+                <button class="btn btn-ghost btn-sm" id="btnQrDownload" style="margin-top:8px;" disabled>⬇️ Descargar PNG</button>
+                <div class="tool-info-box" id="qrOutputInfo" style="display:none;margin-top:8px;"></div>
+            </div>
+        </aside>
+        <main class="preview-area">
+            <img src="assets/logo.png" alt="" class="print-watermark" aria-hidden="true">
+            <div class="preview-inner" id="qrPreviewInner" style="align-items:center;justify-content:center;">
+                <div class="tool-empty" id="qrEmptyState">
+                    <div class="es-title">Sin código QR aún</div>
+                    <div class="es-sub">Escribe un enlace o número de WhatsApp y presiona <strong>Generar código QR</strong>.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <nav class="app-rail" id="appRail">
+        <div class="rail-title"><span class="rt-icon">🧰</span><span class="rt-text">Herramientas</span></div>
+        <button class="rail-btn active" data-tool="print" title="Impresión de fotos">🖨<span>Imprimir</span></button>
+        <button class="rail-btn" data-tool="convert" title="Convertidor de imágenes">🔄<span>Convertir</span></button>
+        <button class="rail-btn" data-tool="curp" title="CURP al 200%">🪪<span>CURP</span></button>
+        <button class="rail-btn" data-tool="poster" title="Poster gigante">🖼<span>Poster</span></button>
+        <button class="rail-btn" data-tool="compress" title="Compresor de imágenes">🗜<span>Comprimir</span></button>
+        <button class="rail-btn" data-tool="img2pdf" title="Unir imágenes en un PDF">📑<span>Img→PDF</span></button>
+        <button class="rail-btn" data-tool="pdftools" title="Comprimir, unir y dividir PDF">📚<span>PDF</span></button>
+        <button class="rail-btn" data-tool="qr" title="Generador de código QR">▦<span>QR</span></button>
+    </nav>
+
+    <div class="lightbox-overlay" id="lightbox">
+        <div class="lightbox-title" id="lbTitle">Editor de imagen</div>
+        <div class="lightbox-canvas-wrap" id="lightboxCanvasWrap">
+            <canvas id="lightboxCanvas"></canvas>
+            <div class="crop-rect" id="cropRect">
+                <span class="crop-handle" data-handle="nw"></span>
+                <span class="crop-handle" data-handle="ne"></span>
+                <span class="crop-handle" data-handle="sw"></span>
+                <span class="crop-handle" data-handle="se"></span>
+            </div>
+        </div>
+        <div class="crop-toolbar" id="cropToolbar">
+            <span>Proporción:</span>
+            <div class="select-wrap">
+                <select id="cropRatio">
+                    <option value="free">Libre</option>
+                    <option value="original">Original</option>
+                    <option value="1">Cuadrado 1:1</option>
+                    <option value="1.333333">Horizontal 4:3</option>
+                    <option value="0.75">Vertical 3:4</option>
+                    <option value="1.545455">Credencial 8.5:5.5</option>
+                    <option value="0.666667">Foto 10:15</option>
+                </select>
+            </div>
+            <button id="lbResetCrop" class="btn btn-ghost btn-sm" type="button">↺ Centrar</button>
+            <span class="crop-help">Arrastra el área o sus esquinas.</span>
+        </div>
+        <div class="lightbox-controls">
+            <button id="lbPrev" title="Imagen anterior">← Anterior</button>
+            <button id="lbNext" title="Imagen siguiente">Siguiente →</button>
+            <button id="lbRotateCW" title="Rotar 90°">↻ Rotar</button>
+            <button id="lbFlipH" title="Voltear horizontal">↔ Voltear H</button>
+            <button id="lbFlipV" title="Voltear vertical">↕ Voltear V</button>
+            <button id="lbCropMode" title="Activar modo recorte">✂ Recortar</button>
+            <button id="lbApplyCrop" class="btn-apply" style="display:none;">✅ Aplicar recorte</button>
+            <button id="lbDelete" class="btn-delete" title="Eliminar esta imagen">🗑 Eliminar</button>
+            <button id="lbCancel" class="btn-cancel">✕ Cerrar</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalDupl">
+        <div class="modal-box">
+            <h3>📋 Duplicar imagen</h3>
+            <p style="font-size:0.73rem;color:var(--t500);">Crea copias extra de una imagen por su índice.</p>
+            <div class="modal-row">
+                <span style="font-size:0.78rem;color:var(--t300);">Índice:</span>
+                <input type="number" id="duplIndex" value="1" min="1" step="1" style="width:60px;">
+                <img id="duplPreview" src="" alt="Preview" style="display:none;">
+            </div>
+            <div class="modal-row">
+                <span style="font-size:0.78rem;color:var(--t300);">Copias extra:</span>
+                <input type="number" id="duplCount" value="5" min="1" max="200" step="1" style="width:80px;">
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button class="btn btn-primary btn-sm" id="btnDuplConfirm" style="flex:1;">✅ Duplicar</button>
+                <button class="btn btn-ghost btn-sm" id="btnDuplCancel" style="flex:1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===================== MODAL: AVISO DE PRIVACIDAD ===================== -->
+    <div class="modal-overlay" id="modalPrivacy">
+        <div class="modal-box privacy-box">
+            <div class="privacy-head">
+                <img src="assets/logo.png" alt="Ciber Alexis" class="privacy-logo brand-logo">
+                <div>
+                    <h3>Aviso de privacidad</h3>
+                    <div class="privacy-updated">Última actualización: septiembre de 2026</div>
+                </div>
+                <button class="icon-btn privacy-close" id="btnPrivacyClose" title="Cerrar">✕</button>
+            </div>
+
+            <div class="privacy-highlight">
+                <span class="ph-icon">🔒</span>
+                <div>
+                    <b>Tus archivos no salen de este dispositivo.</b>
+                    Todas las herramientas de esta página funcionan dentro de tu navegador.
+                    Las imágenes y los PDF que cargas no se envían a ningún servidor ni se
+                    almacenan en ningún lado.
+                </div>
+            </div>
+
+            <div class="privacy-body">
+                <h4>1. Responsable</h4>
+                <p>
+                    <b>Ciber Alexis</b> (Miguel Ángel), con domicilio en Zaragoza, Veracruz, México, no es responsable del uso de esta herramienta gratuita, para uso propio a fines de comercio o personales y de las funciones que se utilicen través de esta herramienta.
+                    Contacto: <b>922 122 4111</b>.
+                </p>
+
+                <h4>2. Qué datos tratamos</h4>
+                <p>
+                    Esta suite de herramientas <b>no recaba, no transmite y no almacena</b> los archivos
+                    que procesas. Las imágenes, documentos PDF y textos que cargas se abren y se
+                    procesan localmente, en la memoria de tu propio navegador, y se eliminan en cuanto
+                    cierras o recargas la pestaña. No existe una base de datos con tu contenido porque
+                    el contenido nunca llega hasta nosotros.
+                </p>
+
+                <h4>3. Finalidad</h4>
+                <p>
+                    Los archivos que cargas se usan únicamente para ejecutar la herramienta que tú
+                    elegiste: imprimir, convertir, comprimir, generar un PDF, crear un código QR o
+                    ampliar un documento. No se usan para ninguna otra finalidad, ni para publicidad,
+                    ni para elaboración de perfiles.
+                </p>
+
+                <h4>4. Transferencias</h4>
+                <p>
+                    No realizamos transferencia alguna de tus archivos a terceros, dentro ni fuera del
+                    país, porque dichos archivos no salen de tu equipo.
+                </p>
+
+                <h4>5. Información técnica que sí sale de tu equipo</h4>
+                <p>
+                    Por transparencia lo aclaramos: esta página carga sus componentes de funcionamiento
+                    (librerías de compresión, generación de PDF, lectura de PDF, OCR y códigos QR) desde
+                    los servicios públicos de distribución <b>cdnjs.cloudflare.com</b> y
+                    <b>cdn.jsdelivr.net</b>. Al hacerlo, esos proveedores pueden registrar tu dirección
+                    IP y datos técnicos de tu navegador, tal como ocurre al visitar cualquier sitio web.
+                    <b>En ningún caso reciben el contenido de tus archivos.</b> Además, la función de
+                    reconocimiento de texto descarga por única vez sus datos de idioma desde ese mismo
+                    servicio.
+                </p>
+
+                <h4>6. Cookies y almacenamiento local</h4>
+                <p>
+                    No utilizamos cookies de rastreo ni herramientas de analítica. Únicamente puede
+                    guardarse en tu navegador una preferencia de apariencia (tema claro u oscuro) para
+                    recordarla en tu siguiente visita. Puedes borrarla limpiando los datos del sitio
+                    desde tu navegador.
+                </p>
+
+                <h4>7. Derechos ARCO</h4>
+                <p>
+                    Tienes derecho a acceder, rectificar, cancelar u oponerte al tratamiento de tus datos
+                    personales, así como a revocar tu consentimiento, conforme a la Ley Federal de
+                    Protección de Datos Personales en Posesión de los Particulares. Dado que esta
+                    herramienta no conserva datos personales ni archivos, no existe información que
+                    rectificar o cancelar. Si aun así deseas ejercer cualquiera de estos derechos o
+                    hacer una consulta, escríbenos al <b>922 122 4111</b>.
+                </p>
+
+                <h4>8. Responsabilidad sobre el contenido</h4>
+                <p>
+                    Eres responsable de los archivos que procesas en esta herramienta y de contar con
+                    los derechos necesarios sobre ellos. Ciber Alexis no revisa, conserva ni supervisa
+                    dicho contenido, y no se hace responsable del uso que hagas de los resultados
+                    obtenidos.
+                </p>
+
+                <h4>9. Cambios a este aviso</h4>
+                <p>
+                    Cualquier modificación a este aviso se publicará en esta misma ventana, actualizando
+                    la fecha indicada al inicio.
+                </p>
+            </div>
+
+            <div class="privacy-foot">
+                <button class="btn btn-primary btn-sm" id="btnPrivacyOk">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <div class="loader-msg" id="loaderMsg">Procesando archivos…</div>
+    </div>
+
+    <div class="toast-holder" id="toasts"></div>
+
+
+    <div class="app-footer-credit">Desarrollado por Ciber Alexis· Todos los derechos reservados © 2026. <button type="button" class="credit-link" id="btnPrivacyOpen">Aviso de privacidad</button></div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
