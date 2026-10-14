@@ -1016,10 +1016,14 @@
                 const gap = Math.max(getGapCM(), 0.5);
                 const usableW = paper.w - margin * 2;
                 const usableH = paper.h - margin * 2;
-                const pairFits = credDisposition === 'h-side'
-                    ? (scaledW * 2 + gap <= usableW && scaledH <= usableH)
-                    : (scaledH * 2 + gap <= usableH && scaledW <= usableW);
-                const perPage = pairFits ? 2 : 1;
+                const fitsSide = scaledW * 2 + gap <= usableW && scaledH <= usableH;
+                const fitsStack = scaledH * 2 + gap <= usableH && scaledW <= usableW;
+                // Si la disposición elegida no deja dos credenciales por hoja pero la otra sí
+                // (p. ej. 150% / 200% en carta), se usa la que las acomoda juntas en la misma hoja.
+                let disp = credDisposition;
+                if (disp === 'h-side' && !fitsSide && fitsStack) disp = 'v-stack';
+                else if (disp === 'v-stack' && !fitsStack && fitsSide) disp = 'h-side';
+                const perPage = (fitsSide || fitsStack) ? 2 : 1;
                 const totalSheets = Math.ceil(effectiveImages.length / perPage);
 
                 if (scaledW > usableW || scaledH > usableH) {
@@ -1042,27 +1046,36 @@
                     const wrap = createPageWrap(p, totalSheets);
                     const page = document.createElement('div');
                     page.className = 'page credencial-mode';
-                    page.style.justifyContent = 'center';
-                    page.style.alignItems = 'center';
-                    page.style.gap = `${gap}cm`;
-                    page.style.flexDirection = credDisposition === 'h-side' ? 'row' : 'column';
+                    page.style.position = 'relative';
 
                     const pageItemCount = Math.min(perPage, effectiveImages.length - idx);
-                    const totalGroupW = credDisposition === 'h-side'
-                        ? pageItemCount * scaledW + Math.max(0, pageItemCount - 1) * gap
+                    // El grupo se calcula con las tarjetas que caben por hoja (perPage),
+                    // así una tarjeta sola en la última hoja queda en el mismo lugar.
+                    const groupW = disp === 'h-side'
+                        ? perPage * scaledW + (perPage - 1) * gap
                         : scaledW;
-                    const totalGroupH = credDisposition === 'v-stack'
-                        ? pageItemCount * scaledH + Math.max(0, pageItemCount - 1) * gap
+                    const groupH = disp === 'v-stack'
+                        ? perPage * scaledH + (perPage - 1) * gap
                         : scaledH;
-                    const startX = (paper.w - totalGroupW) / 2;
-                    const startY = (paper.h - totalGroupH) / 2;
+                    // Siempre centradas horizontalmente.
+                    // Lado a lado al 100%: parte superior de la hoja (respeta el margen).
+                    // Arriba/Abajo y ampliaciones de 150% / 200%: centradas también en vertical.
+                    const startX = (paper.w - groupW) / 2;
+                    const startY = (disp === 'h-side' && credScale <= 1 && perPage === 2)
+                        ? margin
+                        : (paper.h - groupH) / 2;
 
                     for (let j = 0; j < pageItemCount && idx < effectiveImages.length; j++, idx++) {
-                        const xCm = credDisposition === 'h-side' ? startX + j * (scaledW + gap) : startX;
-                        const yCm = credDisposition === 'v-stack' ? startY + j * (scaledH + gap) : startY;
-                        page.appendChild(makeImgContainer(
+                        const xCm = disp === 'h-side' ? startX + j * (scaledW + gap) : startX;
+                        const yCm = disp === 'v-stack' ? startY + j * (scaledH + gap) : startY;
+                        const cell = makeImgContainer(
                             effectiveImages[idx], scaledW, scaledH, idx, showNumbers, xCm, yCm
-                        ));
+                        );
+                        // Posición absoluta exacta: vista previa, impresión y PDF coinciden.
+                        cell.style.position = 'absolute';
+                        cell.style.left = `${xCm}cm`;
+                        cell.style.top = `${yCm}cm`;
+                        page.appendChild(cell);
                     }
                     wrap.appendChild(page);
                     previewInner.appendChild(wrap);
@@ -3226,6 +3239,7 @@
                     hInput.value = (parseFloat(wInput.value) * (naturalH / naturalW)).toFixed(1);
                     dz.classList.add('loaded');
                     emptyState.style.display = 'none';
+                    showSourcePreview();
                     updateInfo();
                     toast('success', 'Imagen cargada. Define las medidas y genera la vista previa.');
                 } catch (err) {
@@ -3233,6 +3247,27 @@
                 }
             }
             setupDropzone(dz, input, handleFiles);
+
+            // Muestra la imagen cargada, ajustada en proporción al panel, antes de definir medidas.
+            function showSourcePreview() {
+                previewInner.innerHTML = '';
+                if (!posterImg) return;
+                const wrap = document.createElement('div');
+                wrap.className = 'poster-canvas-wrap poster-source-wrap';
+                const imgEl = document.createElement('img');
+                imgEl.className = 'poster-source-img';
+                imgEl.src = posterImg.src;
+                imgEl.alt = 'Imagen del póster';
+                imgEl.draggable = false;
+                wrap.appendChild(imgEl);
+                previewInner.appendChild(wrap);
+
+                const caption = document.createElement('div');
+                caption.className = 'tip';
+                caption.style.marginTop = '8px';
+                caption.textContent = `Imagen cargada (${naturalW} × ${naturalH} px). Define las medidas finales y pulsa «Generar vista previa» para ver la división en hojas.`;
+                previewInner.appendChild(caption);
+            }
 
             function resetPosterPanel() {
                 posterImg = null; naturalW = 0; naturalH = 0; grid = null;
