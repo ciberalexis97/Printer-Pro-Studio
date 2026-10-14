@@ -1178,9 +1178,8 @@
             flex-shrink: 0;
         }
         .page.credencial-mode {
-            justify-content: center;
-            align-items: flex-start;
-            gap: 0.5cm;
+            display: block;
+            position: relative;
         }
         .print-image {
             position: absolute;
@@ -2389,4 +2388,39 @@
 @media (max-width: 640px) {
     .privacy-box { max-height: 88vh; }
     .privacy-body p { font-size: 0.72rem; }
+}
+
+
+/* ============================================================
+   IMPRESIÓN / EXPORTAR A PDF — ocultar crédito de marca
+   ============================================================ */
+@media print {
+    .app-footer-credit,
+    .app-footer-credit *,
+    #btnPrivacyOpen {
+        display: none !important;
+        visibility: hidden !important;
+    }
+}
+
+
+/* ============================================================
+   PÓSTER — vista previa de la imagen recién cargada
+   ============================================================ */
+.poster-source-wrap {
+    display: inline-block;
+    max-width: 100%;
+}
+.poster-source-img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: calc(100vh - 150px);
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+@media print {
+    .poster-source-wrap { display: none !important; }
 }
